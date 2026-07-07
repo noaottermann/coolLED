@@ -7,7 +7,7 @@ import logging
 
 from PIL import Image, ImageColor, ImageDraw, ImageFont
 
-from coolledx import (
+from . import (
     DEFAULT_ANIMATION_SPEED,
     DEFAULT_BACKGROUND_COLOR,
     DEFAULT_COLOR,

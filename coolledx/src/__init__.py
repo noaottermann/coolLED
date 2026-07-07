@@ -1,6 +1,14 @@
 """CoolLEDX driver package."""
 
-from enum import IntEnum, StrEnum
+from enum import Enum, IntEnum
+
+try:
+    from enum import StrEnum
+except ImportError:  # Python < 3.11
+    class StrEnum(str, Enum):
+        """Fallback StrEnum for older Python versions."""
+
+        pass
 
 __version__ = "0.0.1"
 

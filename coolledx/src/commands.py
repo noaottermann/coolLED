@@ -9,8 +9,9 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from asyncio import Future
+    from .hardware import CoolLED
 
-from coolledx import (
+from . import (
     DEFAULT_ANIMATION_SPEED,
     DEFAULT_BACKGROUND_COLOR,
     DEFAULT_COLOR,
@@ -25,7 +26,6 @@ from coolledx import (
     WidthTreatment,
 )
 
-from .hardware import CoolLED
 from .render import (
     create_animation_payload,
     create_image_payload,

@@ -5,7 +5,7 @@ generator, so factored out.
 
 import argparse
 
-from coolledx import (
+from . import (
     DEFAULT_ANIMATION_SPEED,
     DEFAULT_BACKGROUND_COLOR,
     DEFAULT_COLOR,
