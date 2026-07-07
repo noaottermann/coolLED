@@ -353,4 +353,11 @@ class Client:
         """Disconnect from the BLE device."""
         if self.bleak_client is not None:
             LOGGER.debug("Disconnecting from device: %s", self.bleak_client)
-            await self.bleak_client.stop_notify(self.characteristic_uuid)
+            try:
+                await self.bleak_client.stop_notify(self.characteristic_uuid)
+            except Exception:
+                LOGGER.debug("Notification stop failed during disconnect", exc_info=True)
+            await self.bleak_client.disconnect()
+            self.current_command = None
+            self.ble_device = None
+            self.bleak_client = None
