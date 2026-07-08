@@ -37,3 +37,42 @@ If test_display.py does not work, check the following:
    - Reboot the display and try again.
 
 If none of this helps, the next useful step is to capture the exact error message and check whether the sign is advertising the correct CoolLED model and firmware behavior.
+
+If a test fails while you are running pytest, use the error message to choose the next step:
+
+1. If you get an ImportError or ModuleNotFoundError:
+   - Run the tests from the repository root.
+   - Make sure the project root is on the Python path.
+   - Check that the module name in the import matches the file you created.
+
+2. If you get a SyntaxError or IndentationError:
+   - Open the file named in the traceback.
+   - Check for a missing colon, broken indentation, or an unfinished block.
+   - Run the same test again after fixing the syntax.
+
+3. If you get a FileNotFoundError:
+   - Check whether the test expects a file from the tests folder.
+   - Make sure any sample image, animation, or JT file really exists.
+   - Confirm that the test is using the right relative path.
+
+4. If you get a failure about an expected command payload:
+   - The rendering code probably changed.
+   - Re-run the command-generation tests and compare the new payloads.
+   - Update the expected test data only after you are sure the new output is correct.
+
+5. If you get a Bluetooth or Bleak error during a test:
+   - Check whether the test actually needs the hardware connected.
+   - If it does, make sure the device is powered on and not connected elsewhere.
+   - If the test is supposed to be offline, mock or skip the BLE part.
+
+6. If you get a TimeoutError:
+   - Try again once to see whether the device was just slow to respond.
+   - Increase the timeout if the code has a configurable timeout value.
+   - Make sure the panel is awake and reachable before the test starts.
+
+7. If a test passes locally but fails on another machine:
+   - Check the Python version.
+   - Compare installed dependencies.
+   - Look for Windows-specific path or Bluetooth behavior.
+
+When you do not know what to fix, copy the full traceback and match the topmost failing line to the closest file in this repository. That is usually the fastest way to find the real problem.

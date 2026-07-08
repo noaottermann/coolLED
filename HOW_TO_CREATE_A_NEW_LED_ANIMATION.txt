@@ -1,0 +1,59 @@
+How to create a new LED animation in this project
+
+1. Decide what kind of animation you want.
+   - If it is moving text, start from apps/animations/scroller.py.
+   - If it is a framebuffer animation, start from apps/animations/base_anim.py.
+   - If it is a game-like animation, use apps/games/game_engine.py.
+
+2. Create a new Python file in apps/animations/.
+   - Import BaseAnim from apps.animations.base_anim.
+   - Give your class a name that describes the effect.
+
+3. Subclass BaseAnim.
+   - Call super().__init__(width, height, background_color=...).
+   - Store any state you need, such as positions, colors, timers, or random seeds.
+
+4. Implement reset() if the animation needs a restart point.
+   - Use it to clear the buffer and reinitialize any internal state.
+   - If you use a random start, make sure reset() can recreate it cleanly.
+
+5. Implement update().
+   - update() should move the animation forward one frame.
+   - Return True if the frame changed.
+   - Update the framebuffer with set_pixel(), fill(), or draw_points().
+
+6. Use the color helpers when useful.
+   - utils/pixel_math.py has helpers like mix_colors(), scale_color(), grayscale(), and invert_color().
+   - These are useful for gradients, fades, and simple effects.
+
+7. Test the animation locally.
+   - Use animation_engine.py if the animation is not a game.
+   - Use game_engine.py if the animation behaves like a game or needs input mode handling.
+   - Make sure the width and height match your device or your config values.
+
+8. Add a small launcher or wire it into main.py.
+   - main.py currently runs the scrolling demo.
+   - You can copy that pattern and replace Scroller with your new animation class.
+
+9. If you want keyboard control, add a control_mode or input option.
+   - Snake and Pong already show how to support auto and keyboard modes.
+   - On Windows, keyboard polling can use msvcrt.
+
+10. When the animation looks correct, create a short test.
+    - Check that the class imports correctly.
+    - Check that update() changes the frame.
+    - If possible, create a smoke test that runs the animation for a few frames.
+
+Minimal structure for a new animation class:
+
+    from apps.animations.base_anim import BaseAnim
+
+    class MyAnimation(BaseAnim):
+        def reset(self) -> None:
+            ...
+
+        def update(self) -> bool:
+            ...
+            return True
+
+If the animation should be shown on the LEDs, run it through BleManager and AnimationEngine so the buffer is converted to an image and sent to the panel.
