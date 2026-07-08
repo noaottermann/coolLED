@@ -88,6 +88,7 @@ class CommandStatus(Enum):
     ACKNOWLEDGED = 2
     ERROR = 3
 
+
 class Command(abc.ABC):
     """Abstract base class for commands."""
 
@@ -311,17 +312,12 @@ class SetBrightness(Command):
         self.brightness = brightness
 
     def get_command_raw_data_chunks(self) -> list[bytearray]:
-        """Get the brightness command data (Format Court)."""
+        """Get the brightness command data."""
         return [
             bytearray.fromhex(
                 f"{self.get_hardware().cmdbyte_brightness():02x} {self.brightness:02X}"
             ),
         ]
-
-    @staticmethod
-    def expect_notify() -> bool:
-        """Les commandes courtes ne renvoient pas d'ACK."""
-        return False
 
 
 class TurnOnOffApp(Command):
@@ -334,14 +330,9 @@ class TurnOnOffApp(Command):
         self.on = on
 
     def get_command_raw_data_chunks(self) -> list[bytearray]:
-        """Get the turn on/off app command data (Format Court)."""
+        """Get the turn on/off app command dat."""
         onoff = 0x01 if self.on else 0x00
         return [bytearray.fromhex(f"{self.get_hardware().cmdbyte_switch():02x} {onoff:02X}")]
-
-    @staticmethod
-    def expect_notify() -> bool:
-        """Les commandes courtes ne renvoient pas d'ACK."""
-        return False
 
 
 class TurnOnOffButton(Command):

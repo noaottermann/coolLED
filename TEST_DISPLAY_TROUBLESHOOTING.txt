@@ -1,0 +1,39 @@
+If test_display.py does not work, check the following:
+
+1. Make sure the dependencies are installed.
+   Run: pip install -r requirements.txt
+
+2. Confirm Bluetooth is enabled and the CoolLED device is not already connected to another app.
+   Close any phone app or other program that may be using the sign.
+
+3. Verify the MAC address in utils/config.py.
+   If your device address is different, update MAC_ADDRESS before running the script.
+
+4. Confirm the display size matches your device.
+   If the sign is not 64x16, update DISPLAY_WIDTH and DISPLAY_HEIGHT in utils/config.py.
+
+5. Run the script from the repository root.
+   Example: python test_display.py
+
+6. If the script connects but no pixels appear:
+   - Try lowering or raising the brightness value in test_display.py.
+   - Check that the device is powered on.
+   - Make sure the sign is actually the model you expect.
+   - Try a very simple test pattern first, such as a single bright pixel or a full solid color.
+
+7. If the script fails to connect:
+   - Move closer to the device.
+   - Turn Bluetooth off and back on.
+   - Restart the sign and your PC Bluetooth adapter.
+   - Wait a few seconds after connecting; some devices need a short delay before they accept image data.
+
+8. If you get an import error or module error:
+   - Run the script from the project root folder.
+   - Confirm you are using the correct Python environment.
+
+9. If the script says it sent data but the LEDs stay blank:
+   - Double-check that the sign dimensions are correct.
+   - Try another known-working command or a different test image.
+   - Reboot the display and try again.
+
+If none of this helps, the next useful step is to capture the exact error message and check whether the sign is advertising the correct CoolLED model and firmware behavior.

@@ -1,14 +1,16 @@
 import os
 import tempfile
 import asyncio
+from pathlib import Path
 from typing import List, Tuple
 from PIL import Image
 
 from coolledx.client import Client
 from coolledx.commands import SetImage, TurnOnOffApp, SetBrightness
+from utils.config import DISPLAY_HEIGHT, DISPLAY_WIDTH, MAC_ADDRESS
 
 class MatrixDisplay:
-    def __init__(self, mac_address: str = "FF:00:00:04:1B:DF", width: int = 64, height: int = 16):
+    def __init__(self, mac_address: str = MAC_ADDRESS, width: int = DISPLAY_WIDTH, height: int = DISPLAY_HEIGHT):
         self.mac_address = mac_address
         self.width = width
         self.height = height
@@ -20,67 +22,55 @@ class MatrixDisplay:
         self.clear_buffer()
 
     def clear_buffer(self):
+        """Réinitialise le buffer interne en noir sans l'envoyer immédiatement."""
         self.buffer = [[(0, 0, 0) for _ in range(self.width)] for _ in range(self.height)]
 
     async def connect(self) -> bool:
+        """Establish the BLE connection to the LED matrix."""
         try:
-            print(f"[BLE] Connexion à la matrice {self.mac_address} via coolledx...")
+            print(f"[BLE] Connecting to matrix {self.mac_address} via coolledx...")
             await self.client.connect()
-            
-            # 👇 FIX WINDOWS : On laisse la pile BLE s'initialiser correctement
-            print("[BLE] Négociation BLE en cours, attente de 2 secondes...")
-            await asyncio.sleep(2.0) 
-            
             self.is_connected = True
-            print("[BLE] Connecté avec succès. Matériel auto-détecté !")
+            print("[BLE] Connected successfully.")
             return True
         except Exception as e:
-            print(f"[BLE] Échec de la connexion : {e}")
+            print(f"[BLE] Connection failed: {e}")
             self.is_connected = False
             return False
 
     async def disconnect(self):
+        """Close the Bluetooth session cleanly."""
         if self.is_connected:
             try:
                 await self.client.disconnect()
-                print("[BLE] Déconnecté avec succès.")
+                print("[BLE] Disconnected successfully.")
             except Exception as e:
-                print(f"[BLE] Erreur de déconnexion : {e}")
+                print(f"[BLE] Disconnect error: {e}")
             finally:
                 self.is_connected = False
 
     def set_pixel(self, x: int, y: int, color: Tuple[int, int, int]):
+        """Change one pixel in the local framebuffer."""
         if 0 <= x < self.width and 0 <= y < self.height:
             self.buffer[y][x] = color
 
     def fill(self, color: Tuple[int, int, int]):
+        """Fill the whole screen with one color."""
         self.buffer = [[color for _ in range(self.width)] for _ in range(self.height)]
 
     def clear(self):
+        """Turn every pixel off in the local framebuffer."""
         self.fill((0, 0, 0))
 
     async def set_power(self, on: bool):
-        """Allume ou éteint l'affichage."""
+        """Turn the matrix display on or off through the command API."""
         if not self.is_connected:
             return
-        print(f"[BLE] Demande d'alimentation : {'ON' if on else 'OFF'}")
-        try:
-            await self.client.send_command(TurnOnOffApp(on=on))
-        except TimeoutError:
-            print("[BLE] ⚠️ Avertissement : Pas d'accusé de réception pour l'alimentation (ignoré).")
-
-    async def set_brightness(self, level: int):
-        """Règle la luminosité de 0 (min) à 255 (max)."""
-        if not self.is_connected:
-            return
-        level = max(0, min(255, level))
-        print(f"[BLE] Réglage luminosité à {level}/255")
-        try:
-            await self.client.send_command(SetBrightness(brightness=level))
-        except TimeoutError:
-            print("[BLE] ⚠️ Avertissement : Pas d'accusé de réception pour la luminosité (ignoré).")
+        cmd = TurnOnOffApp(on=on)
+        await self.client.send_command(cmd)
 
     def _buffer_to_image(self) -> Image.Image:
+        """Convert the framebuffer into a PIL image."""
         image = Image.new("RGB", (self.width, self.height), (0, 0, 0))
         for y, row in enumerate(self.buffer):
             for x, color in enumerate(row):
@@ -88,25 +78,19 @@ class MatrixDisplay:
         return image
 
     async def show(self):
+        """Send the current framebuffer to the physical matrix."""
         if not self.is_connected:
-            print("[WARN] Impossible d'afficher : matrice non connectée.")
+            print("[WARN] Cannot display: matrix is not connected.")
             return
-
-        temp_path = None
+        temp_path: Path | None = None
         try:
             image = self._buffer_to_image()
             with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
                 temp_path = temp_file.name
-                
             image.save(temp_path)
-            
-            cmd = SetImage(filename=temp_path)
-            await self.client.send_command(cmd)
-            
-        except TimeoutError:
-            print("[BLE] ⚠️ Avertissement : Timeout partiel sur l'envoi d'image (trame probablement reçue).")
+            await self.client.send_command(SetImage(temp_path))
         except Exception as e:
-            print(f"[BLE] Erreur de transmission : {e}")
+            print(f"[BLE] Frame transmission error: {e}")
         finally:
             if temp_path and os.path.exists(temp_path):
                 os.remove(temp_path)
