@@ -2,24 +2,39 @@
 
 from __future__ import annotations
 
+import os
 import random
 from collections import deque
+from typing import Literal, cast
 
 from utils.config import DISPLAY_HEIGHT, DISPLAY_WIDTH
-from utils.pixel_math import BLACK, WHITE, Color, clamp_color, mix_colors
+from utils.pixel_math import BLACK, WHITE, mix_colors
 
 from ..animations.base_anim import BaseAnim
 
 
 Direction = tuple[int, int]
 
+try:
+    import msvcrt
+except ImportError:  # pragma: no cover - Windows-only input support
+    msvcrt = None
+
 
 class Snake(BaseAnim):
     """Autonomous snake that chases food on the LED grid."""
 
-    def __init__(self, width: int = DISPLAY_WIDTH, height: int = DISPLAY_HEIGHT, *, seed: int | None = None) -> None:
+    def __init__(
+        self,
+        width: int = DISPLAY_WIDTH,
+        height: int = DISPLAY_HEIGHT,
+        *,
+        seed: int | None = None,
+        control_mode: Literal["auto", "keyboard"] = "auto",
+    ) -> None:
         super().__init__(width, height, background_color=BLACK)
         self.seed = seed
+        self.control_mode = control_mode
         self._rng = random.Random(seed)
         self._snake = deque[tuple[int, int]]()
         self._direction: Direction = (1, 0)
@@ -71,6 +86,35 @@ class Snake(BaseAnim):
                 self._next_direction = direction
                 return
 
+    def _read_keyboard_direction(self) -> Direction | None:
+        """Read one arrow-key direction from the keyboard if available."""
+        if msvcrt is None:
+            return None
+        if not msvcrt.kbhit():
+            return None
+
+        key = msvcrt.getch()
+        if key not in {b"\x00", b"\xe0"}:
+            return None
+
+        key = msvcrt.getch()
+        mapping: dict[bytes, Direction] = {
+            b"H": (0, -1),
+            b"P": (0, 1),
+            b"K": (-1, 0),
+            b"M": (1, 0),
+        }
+        return mapping.get(key)
+
+    def _apply_keyboard_direction(self) -> None:
+        direction = self._read_keyboard_direction()
+        if direction is None:
+            return
+
+        opposite = (-self._direction[0], -self._direction[1])
+        if direction != opposite:
+            self._next_direction = direction
+
     def _render(self) -> None:
         self.clear()
         self.set_pixel(self._food[0], self._food[1], (255, 32, 32))
@@ -83,7 +127,11 @@ class Snake(BaseAnim):
 
     def update(self) -> bool:
         """Advance the snake one step toward food."""
-        self._choose_direction()
+        if self.control_mode == "keyboard":
+            self._apply_keyboard_direction()
+        else:
+            self._choose_direction()
+
         self._direction = self._next_direction
 
         head_x, head_y = self._snake[0]

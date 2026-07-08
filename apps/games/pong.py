@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
+from typing import Literal
 import random
 
+try:
+    import msvcrt
+except ImportError:  # pragma: no cover - Windows-only input support
+    msvcrt = None
+
 from utils.config import DISPLAY_HEIGHT, DISPLAY_WIDTH
-from utils.pixel_math import BLACK, Color, WHITE, clamp
+from utils.pixel_math import BLACK, WHITE, clamp
 
 from ..animations.base_anim import BaseAnim
 
@@ -13,9 +19,17 @@ from ..animations.base_anim import BaseAnim
 class Pong(BaseAnim):
     """A tiny autonomous Pong simulation."""
 
-    def __init__(self, width: int = DISPLAY_WIDTH, height: int = DISPLAY_HEIGHT, *, seed: int | None = None) -> None:
+    def __init__(
+        self,
+        width: int = DISPLAY_WIDTH,
+        height: int = DISPLAY_HEIGHT,
+        *,
+        seed: int | None = None,
+        control_mode: Literal["auto", "keyboard"] = "auto",
+    ) -> None:
         super().__init__(width, height, background_color=BLACK)
         self.seed = seed
+        self.control_mode = control_mode
         self._rng = random.Random(seed)
         self.paddle_height = max(3, height // 4)
         self.paddle_left = 0
@@ -45,11 +59,33 @@ class Pong(BaseAnim):
         self.ball_dy = float(self._rng.choice((-1, 1)))
 
     def _move_paddles(self) -> None:
+        if self.control_mode == "keyboard":
+            self._move_keyboard_paddle()
+            self._move_ai_paddle()
+            return
+
         left_target = int(self.ball_y) - self.paddle_height // 2
         right_target = int(self.ball_y) - self.paddle_height // 2
         self.paddle_left += clamp(left_target - self.paddle_left, -1, 1)
         self.paddle_right += clamp(right_target - self.paddle_right, -1, 1)
         self.paddle_left = clamp(self.paddle_left, 0, self.height - self.paddle_height)
+        self.paddle_right = clamp(self.paddle_right, 0, self.height - self.paddle_height)
+
+    def _move_keyboard_paddle(self) -> None:
+        if msvcrt is not None and msvcrt.kbhit():
+            key = msvcrt.getch()
+            if key in {b"\x00", b"\xe0"}:
+                key = msvcrt.getch()
+                if key == b"H":
+                    self.paddle_left -= 1
+                elif key == b"P":
+                    self.paddle_left += 1
+
+        self.paddle_left = clamp(self.paddle_left, 0, self.height - self.paddle_height)
+
+    def _move_ai_paddle(self) -> None:
+        target = int(self.ball_y) - self.paddle_height // 2
+        self.paddle_right += clamp(target - self.paddle_right, -1, 1)
         self.paddle_right = clamp(self.paddle_right, 0, self.height - self.paddle_height)
 
     def _bounce_vertical(self) -> None:
