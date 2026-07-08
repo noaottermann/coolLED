@@ -1,7 +1,0 @@
-fileignoreconfig:
-  - filename: poetry.lock
-    ignore_detectors: [filecontent]
-version: ""
-scopeconfig:
-  - scope: python
-threshold: medium

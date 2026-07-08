@@ -6,8 +6,8 @@ from typing import List, Tuple
 
 from PIL import Image
 
-from coolledx.src.client import Client
-from coolledx.src.commands import SetImage, TurnOnOffApp
+from coolledx.client import Client
+from coolledx.commands import SetImage, TurnOnOffApp
 
 class MatrixDisplay:
     def __init__(
