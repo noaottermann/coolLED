@@ -219,6 +219,11 @@ class Command(abc.ABC):
                 ),
             )
         return chunks
+    
+    def create_command(self, data: bytearray) -> bytearray:
+        """Wrap the data in start (0x01) and end (0x03) bytes, escaping special characters."""
+        escaped_data = self.escape_bytes(data)
+        return bytearray(b"\x01") + bytearray(escaped_data) + bytearray(b"\x03")
 
     def get_command_chunks(self) -> list[bytearray]:
         """Get the command as a bytearray."""
@@ -302,18 +307,21 @@ class SetBrightness(Command):
     def __init__(self, brightness: int) -> None:
         """Legitimate brightness values are 0x00 to 0xFF."""
         if brightness < MIN_BYTE_VALUE or brightness > MAX_BYTE_VALUE:
-            raise ValueError(
-                f"Brightness must be between 0x00 and 0xFF, not {brightness}",
-            )
+            raise ValueError(f"Brightness must be between 0x00 and 0xFF, not {brightness}")
         self.brightness = brightness
 
     def get_command_raw_data_chunks(self) -> list[bytearray]:
-        """Get the brightness command data."""
+        """Get the brightness command data (Format Court)."""
         return [
             bytearray.fromhex(
-                f"{self.get_hardware().cmdbyte_brightness():02x} {self.brightness:02X}",
+                f"{self.get_hardware().cmdbyte_brightness():02x} {self.brightness:02X}"
             ),
         ]
+
+    @staticmethod
+    def expect_notify() -> bool:
+        """Les commandes courtes ne renvoient pas d'ACK."""
+        return False
 
 
 class TurnOnOffApp(Command):
@@ -326,9 +334,14 @@ class TurnOnOffApp(Command):
         self.on = on
 
     def get_command_raw_data_chunks(self) -> list[bytearray]:
-        """Get the turn on/off app command data."""
+        """Get the turn on/off app command data (Format Court)."""
         onoff = 0x01 if self.on else 0x00
         return [bytearray.fromhex(f"{self.get_hardware().cmdbyte_switch():02x} {onoff:02X}")]
+
+    @staticmethod
+    def expect_notify() -> bool:
+        """Les commandes courtes ne renvoient pas d'ACK."""
+        return False
 
 
 class TurnOnOffButton(Command):
