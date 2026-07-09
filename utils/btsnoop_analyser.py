@@ -23,7 +23,9 @@ import struct
 import sys
 import argparse
 
+# ---------------------------------------------------------------------------
 # Constantes du format btsnoop
+# ---------------------------------------------------------------------------
 BTSNOOP_MAGIC = b"btsnoop\x00"
 HEADER_LEN = 16  # magic(8) + version(4) + datalink(4)
 RECORD_HEADER_LEN = 24  # orig_len(4) incl_len(4) flags(4) drops(4) ts(8)
@@ -185,6 +187,9 @@ def main():
     parser.add_argument("--out", help="fichier de sortie texte (en plus de l'affichage console)")
     parser.add_argument("--all-opcodes", action="store_true",
                          help="afficher tous les opcodes ATT, pas seulement Write/Notify")
+    parser.add_argument("--gap-threshold", type=float, default=1200.0,
+                         help="silence (en ms) au-delà duquel on considère qu'une nouvelle "
+                              "action commence (défaut: 1200ms). Adapte à tes pauses réelles.")
     args = parser.parse_args()
 
     records = parse_btsnoop(args.logfile)
@@ -210,13 +215,25 @@ def main():
 
     out_lines = []
     count = 0
+    cluster_num = 0
+    last_ts = None
     t0 = records[0][0] if records else 0
+    gap_threshold_us = args.gap_threshold * 1000.0  # ms -> µs
 
     for ts, direction, conn_handle, opcode, payload in iter_att_packets(records):
         if conn_handle not in target_handles:
             continue
         if not args.all_opcodes and opcode not in INTERESTING_OPCODES:
             continue
+
+        # Détection d'un nouveau "cluster" (= nouvelle action) via silence radio
+        if last_ts is None or (ts - last_ts) > gap_threshold_us:
+            cluster_num += 1
+            gap_txt = "-" if last_ts is None else f"{(ts - last_ts) / 1000:.0f}"
+            sep = f"\n===== Action probable #{cluster_num} (silence de {gap_txt} ms avant) ====="
+            print(sep)
+            out_lines.append(sep)
+        last_ts = ts
 
         count += 1
         rel_ms = (ts - t0) / 1000.0
@@ -237,7 +254,10 @@ def main():
         print(line)
         out_lines.append(line)
 
-    print(f"\n[i] {count} trames ATT pertinentes affichées pour {target_mac}.")
+    print(f"\n[i] {count} trames ATT pertinentes affichées pour {target_mac}, "
+          f"regroupées en {cluster_num} action(s) probable(s).")
+    print("[i] Compare ce nombre de clusters au nombre d'actions que tu as réellement effectuées.\n"
+          "    Si ça ne correspond pas, ajuste --gap-threshold (pauses plus longues/courtes).")
 
     if args.out:
         with open(args.out, "w", encoding="utf-8") as f:
